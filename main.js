@@ -105,6 +105,7 @@ const beforeImg = document.querySelector('.ba-before');
 const handle = document.querySelector('.ba-handle');
 const inlineSlider = document.getElementById('inlineSlider');
 const packageSlideshowOverlay = document.getElementById('packageSlideshowOverlay');
+const packageSlideshowPopup = document.querySelector('.slideshow-popup');
 const packageSlideshowTitle = document.getElementById('packageSlideshowTitle');
 const packageSlideshowImage = document.getElementById('packageSlideshowImage');
 const packageSlideshowCounter = document.getElementById('packageSlideshowCounter');
@@ -241,6 +242,42 @@ function renderPackageSlide() {
   packageSlideshowCounter.textContent = `${activePackageSlideIndex + 1} / ${config.slides.length}`;
 }
 
+function positionPackageSlideshowInView() {
+  if (!packageSlideshowOverlay) return;
+
+  const viewport = window.visualViewport;
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+  const viewportTop = scrollTop + (viewport ? viewport.offsetTop : 0);
+  const viewportLeft = scrollLeft + (viewport ? viewport.offsetLeft : 0);
+  const viewportHeight = viewport ? viewport.height : window.innerHeight;
+  const viewportWidth = viewport ? viewport.width : window.innerWidth;
+
+  // In embedded iframe environments, absolute positioning tied to the current
+  // viewport is more reliable than fixed positioning.
+  packageSlideshowOverlay.style.position = 'absolute';
+  packageSlideshowOverlay.style.top = `${viewportTop}px`;
+  packageSlideshowOverlay.style.left = `${viewportLeft}px`;
+  packageSlideshowOverlay.style.right = 'auto';
+  packageSlideshowOverlay.style.bottom = 'auto';
+  packageSlideshowOverlay.style.width = `${viewportWidth}px`;
+  packageSlideshowOverlay.style.height = `${viewportHeight}px`;
+  packageSlideshowOverlay.style.minHeight = `${viewportHeight}px`;
+}
+
+function resetPackageSlideshowPosition() {
+  if (!packageSlideshowOverlay) return;
+
+  packageSlideshowOverlay.style.position = '';
+  packageSlideshowOverlay.style.top = '';
+  packageSlideshowOverlay.style.left = '';
+  packageSlideshowOverlay.style.right = '';
+  packageSlideshowOverlay.style.bottom = '';
+  packageSlideshowOverlay.style.width = '';
+  packageSlideshowOverlay.style.height = '';
+  packageSlideshowOverlay.style.minHeight = '';
+}
+
 function openPackageSlideshow(event, packageKey) {
   if (event) {
     event.preventDefault();
@@ -255,6 +292,12 @@ function openPackageSlideshow(event, packageKey) {
   packageSlideshowOverlay.classList.add('active');
   packageSlideshowOverlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+
+  requestAnimationFrame(() => {
+    positionPackageSlideshowInView();
+    packageSlideshowOverlay.scrollTo({ top: 0, behavior: 'auto' });
+    packageSlideshowPopup.scrollTo({ top: 0, behavior: 'auto' });
+  });
 }
 
 function changePackageSlide(direction) {
@@ -269,6 +312,7 @@ function closePackageSlideshow() {
   packageSlideshowOverlay.classList.remove('active');
   packageSlideshowOverlay.setAttribute('aria-hidden', 'true');
   activePackageKey = null;
+  resetPackageSlideshowPosition();
 
   if (!document.getElementById('popupOverlay').classList.contains('active')) {
     document.body.style.overflow = '';
@@ -296,3 +340,17 @@ document.addEventListener('keydown', function(e) {
     changePackageSlide(1);
   }
 });
+
+window.addEventListener('resize', function() {
+  if (packageSlideshowOverlay.classList.contains('active')) {
+    positionPackageSlideshowInView();
+  }
+});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', function() {
+    if (packageSlideshowOverlay.classList.contains('active')) {
+      positionPackageSlideshowInView();
+    }
+  });
+}
